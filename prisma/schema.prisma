@@ -1,0 +1,382 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  STUDENT
+  INSTRUCTOR
+  ADMIN
+}
+
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  DROPPED
+}
+
+enum LessonType {
+  VIDEO
+  TEXT
+  QUIZ
+  ASSIGNMENT
+}
+
+enum SubmissionStatus {
+  PENDING
+  SUBMITTED
+  GRADED
+}
+
+enum TestSubmissionStatus {
+  PENDING
+  GRADED
+  RETURNED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String?
+  role          UserRole  @default(STUDENT)
+  image         String?
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  enrollments           Enrollment[]
+  courses               Course[]          @relation("CourseInstructor")
+  assignments           Assignment[]
+  submissions           Submission[]
+  quizAttempts          QuizAttempt[]
+  progress              Progress[]
+  tests                 Test[]            @relation("TestCreator")
+  testAttempts          TestAttempt[]     @relation("TestAttemptUser")
+  testSubmissions       TestSubmission[]  @relation("TestSubmissionUser")
+  testSubmissionsGraded TestSubmission[]  @relation("TestSubmissionGrader")
+  comments              Comment[]         @relation("CommentUser")
+  commentReactions      CommentReaction[] @relation("CommentReactionUser")
+
+  @@map("users")
+}
+
+model Course {
+  id               String       @id @default(cuid())
+  title            String
+  description      String?
+  slug             String       @unique
+  thumbnail        String?
+  status           CourseStatus @default(DRAFT)
+  learningOutcomes String? // JSON array of learning outcomes
+  instructorId     String
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  // Relations
+  instructor  User         @relation("CourseInstructor", fields: [instructorId], references: [id])
+  lessons     Lesson[]
+  enrollments Enrollment[]
+  assignments Assignment[]
+
+  @@map("courses")
+}
+
+model Lesson {
+  id           String     @id @default(cuid())
+  title        String
+  description  String?
+  content      String? // Can be markdown or HTML
+  videoUrl     String?
+  documentUrl  String? // URL to attached document (PDF, DOCX, etc.)
+  documentName String? // Original filename of the document
+  type         LessonType @default(TEXT)
+  topic        String? // Subtopic/Module name to group lessons
+  order        Int        @default(0)
+  courseId     String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  // Relations
+  course   Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progress Progress[]
+  quiz     Quiz?
+
+  @@map("lessons")
+}
+
+model Enrollment {
+  id          String           @id @default(cuid())
+  userId      String
+  courseId    String
+  status      EnrollmentStatus @default(ACTIVE)
+  enrolledAt  DateTime         @default(now())
+  completedAt DateTime?
+
+  // Relations
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course   Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progress Progress[]
+
+  @@unique([userId, courseId])
+  @@map("enrollments")
+}
+
+model Progress {
+  id           String    @id @default(cuid())
+  userId       String
+  lessonId     String
+  enrollmentId String
+  completed    Boolean   @default(false)
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relations
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson     Lesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId, enrollmentId])
+  @@map("progress")
+}
+
+model Assignment {
+  id           String    @id @default(cuid())
+  title        String
+  description  String?
+  courseId     String
+  instructorId String
+  dueDate      DateTime?
+  maxScore     Int       @default(100)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relations
+  course      Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  instructor  User         @relation(fields: [instructorId], references: [id])
+  submissions Submission[]
+
+  @@map("assignments")
+}
+
+model Submission {
+  id           String           @id @default(cuid())
+  assignmentId String
+  userId       String
+  content      String
+  fileUrl      String?
+  status       SubmissionStatus @default(PENDING)
+  score        Int?
+  feedback     String?
+  submittedAt  DateTime?
+  gradedAt     DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  // Relations
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, userId])
+  @@map("submissions")
+}
+
+model Quiz {
+  id           String   @id @default(cuid())
+  title        String
+  description  String?
+  lessonId     String   @unique
+  timeLimit    Int? // in minutes
+  passingScore Int      @default(70)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  lesson    Lesson        @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  questions Question[]
+  attempts  QuizAttempt[]
+
+  @@map("quizzes")
+}
+
+model Question {
+  id            String   @id @default(cuid())
+  quizId        String
+  question      String
+  type          String   @default("multiple_choice") // multiple_choice, true_false, short_answer
+  options       String? // JSON array for multiple choice options
+  correctAnswer String
+  points        Int      @default(1)
+  order         Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  quiz    Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  answers Answer[]
+
+  @@map("questions")
+}
+
+model QuizAttempt {
+  id          String    @id @default(cuid())
+  quizId      String
+  userId      String
+  score       Int?
+  completed   Boolean   @default(false)
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  // Relations
+  quiz    Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers Answer[]
+
+  @@map("quiz_attempts")
+}
+
+model Answer {
+  id         String   @id @default(cuid())
+  attemptId  String
+  questionId String
+  answer     String
+  isCorrect  Boolean?
+  createdAt  DateTime @default(now())
+
+  // Relations
+  attempt  QuizAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@map("answers")
+}
+
+enum TestType {
+  PRACTICE_TEST
+  PAST_PAPER
+}
+
+enum TestStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model Test {
+  id           String     @id @default(cuid())
+  title        String
+  description  String?
+  type         TestType   @default(PRACTICE_TEST)
+  status       TestStatus @default(DRAFT)
+  year         Int? // For past papers - year of the Olympiad
+  olympiadType String? // e.g., "IMO", "RMO", "AMC", etc.
+  documentUrl  String? // URL to test questions PDF
+  documentName String? // Original filename
+  solutionUrl  String? // URL to solutions PDF
+  solutionName String? // Original filename for solutions
+  timeLimit    Int? // Time limit in minutes
+  totalMarks   Int? // Total marks/points
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  createdById  String? // Who created this test
+
+  // Relations
+  createdBy   User?            @relation("TestCreator", fields: [createdById], references: [id])
+  attempts    TestAttempt[]
+  submissions TestSubmission[]
+  comments    Comment[]
+
+  @@map("tests")
+}
+
+model TestAttempt {
+  id          String    @id @default(cuid())
+  testId      String
+  userId      String
+  score       Int?
+  completed   Boolean   @default(false)
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  submittedAt DateTime?
+
+  // Relations
+  test Test @relation(fields: [testId], references: [id], onDelete: Cascade)
+  user User @relation("TestAttemptUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([testId, userId])
+  @@map("test_attempts")
+}
+
+model TestSubmission {
+  id          String               @id @default(cuid())
+  testId      String
+  userId      String
+  fileUrl     String // URL to uploaded work file
+  fileName    String // Original filename
+  status      TestSubmissionStatus @default(PENDING)
+  score       Int?
+  feedback    String?
+  gradedAt    DateTime?
+  gradedById  String? // Who graded this submission
+  submittedAt DateTime             @default(now())
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  // Relations
+  test     Test  @relation(fields: [testId], references: [id], onDelete: Cascade)
+  user     User  @relation("TestSubmissionUser", fields: [userId], references: [id], onDelete: Cascade)
+  gradedBy User? @relation("TestSubmissionGrader", fields: [gradedById], references: [id])
+
+  @@unique([testId, userId])
+  @@map("test_submissions")
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  testId    String
+  userId    String
+  content   String
+  parentId  String? // For replies - ID of parent comment
+  likes     Int      @default(0)
+  dislikes  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  test      Test              @relation(fields: [testId], references: [id], onDelete: Cascade)
+  user      User              @relation("CommentUser", fields: [userId], references: [id], onDelete: Cascade)
+  parent    Comment?          @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[]         @relation("CommentReplies")
+  reactions CommentReaction[]
+
+  @@map("comments")
+}
+
+model CommentReaction {
+  id        String   @id @default(cuid())
+  commentId String
+  userId    String
+  type      String // "like" or "dislike"
+  createdAt DateTime @default(now())
+
+  // Relations
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User    @relation("CommentReactionUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@map("comment_reactions")
+}

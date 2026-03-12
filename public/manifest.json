@@ -1,0 +1,27 @@
+{
+  "name": "Rwanda Olympiad Foundation",
+  "short_name": "ROF Rwanda",
+  "description": "National organization coordinating Mathematics, Physics, Informatics, and AI Olympiads in Rwanda",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0C1E33",
+  "theme_color": "#0C1E33",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/images/rop-logo-short.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/rop-logo-full.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "science"],
+  "lang": "en-RW",
+  "dir": "ltr"
+}
