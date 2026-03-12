@@ -5,12 +5,14 @@
   "scripts": {
     "prebuild": "node scripts/fix-prisma-complete.js",
     "build": "next build",
+    "netlify:build": "prisma generate && node scripts/fix-prisma-complete.js && next build",
     "dev": "next dev",
     "lint": "next lint",
     "start": "next start",
     "db:generate": "prisma generate && node scripts/fix-prisma.js",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
     "db:seed": "node scripts/seed-via-api.js",
     "db:seed-dummy": "node scripts/seed-dummy-data.js",
     "postinstall": "node scripts/fix-prisma.js",
@@ -82,6 +84,7 @@
     "zod": "3.25.76"
   },
   "devDependencies": {
+    "@netlify/plugin-nextjs": "^4.45.0",
     "@tailwindcss/postcss": "^4.1.9",
     "@testing-library/jest-dom": "^6.1.5",
     "@testing-library/react": "^14.1.2",

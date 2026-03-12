@@ -39,3 +39,6 @@ package-lock.json
 # Uploads directory
 /public/uploads/
 /public/uploads/test-submissions/
+
+# Netlify
+.netlify

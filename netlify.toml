@@ -1,0 +1,54 @@
+[build]
+  # Build command - ensures Prisma is generated before Next.js build
+  command = "npm run netlify:build"
+  
+  # Directory to publish (Netlify handles Next.js automatically)
+  publish = ".next"
+  
+  # Node.js version
+  node_version = "20"
+
+[build.environment]
+  # Set NODE_ENV to production
+  NODE_ENV = "production"
+  # Skip Next.js telemetry during build
+  NEXT_TELEMETRY_DISABLED = "1"
+
+# Netlify Functions configuration for Next.js API routes
+[functions]
+  # Node.js version for functions
+  node_bundler = "esbuild"
+  # Timeout for functions (26 seconds max on paid plans, 10s on free tier)
+  timeout = 26
+
+# Next.js plugin configuration
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Headers for security and performance
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+# Cache static assets
+[[headers]]
+  for = "/_next/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Cache images
+[[headers]]
+  for = "/images/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Don't cache API routes
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"

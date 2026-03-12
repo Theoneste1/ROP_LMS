@@ -248,7 +248,7 @@ rolms/
 
 ## 🚀 Deployment
 
-### Quick Deploy to Vercel
+### Deploy to Vercel (Recommended)
 
 1. **Push to GitHub**
 2. **Import to Vercel** - Connect your repository
@@ -258,13 +258,25 @@ rolms/
    - `NEXTAUTH_URL`
 4. **Deploy** - Vercel will automatically build and deploy
 
+### Deploy to Netlify
+
+1. **Push to GitHub**
+2. **Import to Netlify** - Connect your repository at [app.netlify.com](https://app.netlify.com)
+3. **Configure Environment Variables** (see `.env.netlify.example`):
+   - `DATABASE_URL` - PostgreSQL connection string
+   - `NEXTAUTH_SECRET` - Generate with: `openssl rand -base64 32`
+   - `NEXTAUTH_URL` - Your Netlify site URL
+4. **Deploy** - Netlify will use `netlify.toml` configuration automatically
+
+📖 **For detailed Netlify deployment instructions**, see [NETLIFY_DEPLOYMENT.md](./NETLIFY_DEPLOYMENT.md)
+
 ### Database Setup
 
-For production, use PostgreSQL or MySQL:
+For production, use PostgreSQL:
 
 ```prisma
 datasource db {
-  provider = "postgresql"  // or "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 ```
@@ -273,6 +285,11 @@ Then run:
 ```bash
 npx prisma migrate deploy
 ```
+
+**Recommended Database Providers:**
+- [Supabase](https://supabase.com) - Free tier available
+- [Neon](https://neon.tech) - Serverless PostgreSQL
+- [Railway](https://railway.app) - Easy PostgreSQL setup
 
 ---
 
